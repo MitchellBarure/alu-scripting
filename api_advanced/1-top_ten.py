@@ -1,44 +1,58 @@
 #!/usr/bin/python3
 """
-Queries the Reddit API and prints the titles of the first 10 hot posts listed for a given subreddit Prints None if subreddit is invalid.
+Print the titles of the first 10 hot posts for a subreddit.
+
+If the subreddit is invalid or the request fails, print None.
 """
 import requests
 
+
 def top_ten(subreddit):
-    """Print first 10hot posts titles or None if subreddit is invalid."""
+    """Print first 10 hot post titles or None if subreddit is invalid."""
     if subreddit is None or not isinstance(subreddit, str):
         print(None)
         return
 
-    url = "https://www.reddit.com/r/{}/hot.json".format(subreddit)
+    url = "https://api.reddit.com/r/{}/hot".format(subreddit)
+
     headers = {
-        "User-Agent": "ALU-API-Advanced/1.0 (by u_example_student)",
-        "Accept": "application/json"
+        "User-Agent": "python:alu.api_project.top10:v1.0.1 (by MitchellBarure)"
     }
-    params = {'limit': 10}
+    
+    # Request a limit of 10 posts
+    params = {"limit": 10}
 
     try:
         resp = requests.get(
-            url, headers=headers, params=params,
-            allow_redirects=False, timeout=10
+            url,
+            headers=headers,
+            params=params,
+            allow_redirects=False,
+            timeout=5
         )
 
-        # If invalid subreddit or blocked by rate/redirect, print None
+        # Handle non-200 status codes (404, 403, 429, or 302 redirect)
         if resp.status_code != 200:
             print(None)
             return
 
-        data = resp.json()
-        posts = data.get('data', {}).get('children', [])
-
+        # Check for empty response data or API errors within the JSON structure
+        payload = resp.json()
+        posts = payload.get("data", {}).get("children", [])
+        
         if not posts:
             print(None)
             return
 
-        for post in posts[:10]:
-            title = post.get('data', {}).get('title')
-            if title is not None:
+        # Print the titles of the posts
+        for post in posts:
+            title = post.get("data", {}).get("title")
+            if title:
                 print(title)
+
+    except requests.exceptions.RequestException:
+        # Catch network errors, timeouts, etc.
+        print(None)
     except Exception:
-        # Any network/JSON erroR
+        # Catch JSON decoding errors or unexpected structure issues
         print(None)
