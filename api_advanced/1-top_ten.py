@@ -11,7 +11,10 @@ def top_ten(subreddit):
         return
 
     url = "https://www.reddit.com/r/{}/hot.json".format(subreddit)
-    headers = {'User-Agent': 'Mozilla/5.0 (compatible; ALU_API_Project/1.0)'}
+    headers = {
+        "User-Agent": "ALU-API-Advanced/1.0 (by u_example_student)",
+        "Accept": "application/json"
+    }
     params = {'limit': 10}
 
     try:
