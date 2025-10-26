@@ -1,9 +1,10 @@
 #!/usr/bin/python3
 """
-Print titles of the first 10 hot posts for a subreddit.
+Print the titles of the first 10 hot posts for a subreddit.
 
 If the subreddit is invalid or the request fails, print None.
 """
+import time
 import requests
 
 
@@ -13,40 +14,68 @@ def top_ten(subreddit):
         print(None)
         return
 
-    url = "https://www.reddit.com/r/{}/hot.json".format(subreddit)
+    hosts = [
+        "https://api.reddit.com",
+        "https://old.reddit.com",
+        "https://www.reddit.com",
+    ]
+
     headers = {
-        # Descriptive UA (Reddit recommends a unique UA)
-        "User-Agent": "linux:alu.api_advanced.top10:v1.0.0 "
-                      "(by /u/example_student)",
-        "Accept": "application/json"
+        "User-Agent": (
+            "linux:alu.api_advanced.top10:v1.0 "
+            "(by /u/example_student)"
+        ),
+        "Accept": "application/json",
+        "Connection": "close",
     }
-    params = {"limit": 10}
+    params = {"limit": 10, "raw_json": 1}
 
-    try:
-        resp = requests.get(
-            url,
-            headers=headers,
-            params=params,
-            allow_redirects=False,   # <- do NOT follow redirects
-            timeout=10
-        )
-    except Exception:
-        print(None)
-        return
+    for base in hosts:
+        url = "{}/r/{}/hot.json".format(base, subreddit)
 
-    # Only proceed on a clean 200 OK; otherwise print None
-    if resp.status_code != 200:
-        print(None)
-        return
+        # two attempts per host to ride out 429/403 bursts
+        for _ in range(2):
+            try:
+                resp = requests.get(
+                    url,
+                    headers=headers,
+                    params=params,
+                    allow_redirects=False,
+                    timeout=10
+                )
+            except Exception:
+                # try again / next host
+                break
 
-    # Now it's safe to parse JSON
-    payload = resp.json()
-    posts = payload.get("data", {}).get("children", [])
-    if not posts:
-        print(None)
-        return
+            # Retry once on common transient blocks
+            if resp.status_code in (302, 403, 429):
+                time.sleep(1)
+                continue
 
-    for post in posts[:10]:
-        title = post.get("data", {}).get("title")
-        if title is not None:
-            print(title)
+            if resp.status_code != 200:
+                # move to next host
+                break
+
+            # Ensure we actually got JSON (not an HTML page)
+            ctype = resp.headers.get("content-type", "")
+            if "json" not in ctype:
+                break
+
+            try:
+                payload = resp.json()
+            except ValueError:
+                break
+
+            posts = payload.get("data", {}).get("children", [])
+            if not posts:
+                print(None)
+                return
+
+            for post in posts[:10]:
+                title = post.get("data", {}).get("title")
+                if title is not None:
+                    print(title)
+            return
+
+    # All hosts/attempts failed
+    print(None)
