@@ -46,7 +46,6 @@ def top_ten(subreddit):
 
     posts = data.get("data", {}).get("children", [])
     if not posts:
-        # Valid but empty: print nothing (spec only wants None for invalid subs)
         return
 
     for post in posts[:10]:
