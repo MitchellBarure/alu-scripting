@@ -1,58 +1,33 @@
 #!/usr/bin/python3
-"""
-Print the titles of the first 10 hot posts for a subreddit.
 
-If the subreddit is invalid or the request fails, print None.
 """
-import requests
+prints the titles of the first 10 hot posts listed for a given subreddit
+"""
+
+from requests import get
 
 
 def top_ten(subreddit):
-    """Print first 10 hot post titles or None if subreddit is invalid."""
+    """
+    function that queries the Reddit API and prints the titles of the first
+    10 hot posts listed for a given subreddit
+    """
+
     if subreddit is None or not isinstance(subreddit, str):
-        print(None)
-        return
+        print("None")
 
-    url = "https://api.reddit.com/r/{}/hot".format(subreddit)
+    user_agent = {'User-agent': 'Google Chrome Version 81.0.4044.129'}
+    params = {'limit': 10}
+    url = 'https://www.reddit.com/r/{}/hot/.json'.format(subreddit)
 
-    headers = {
-        "User-Agent": "python:alu.api_project.top10:v1.0.1 (by MitchellBarure)"
-    }
-    
-    # Request a limit of 10 posts
-    params = {"limit": 10}
+    response = get(url, headers=user_agent, params=params)
+    results = response.json()
 
     try:
-        resp = requests.get(
-            url,
-            headers=headers,
-            params=params,
-            allow_redirects=False,
-            timeout=5
-        )
+        my_data = results.get('data').get('children')
 
-        # Handle non-200 status codes (404, 403, 429, or 302 redirect)
-        if resp.status_code != 200:
-            print(None)
-            return
+        for i in my_data:
+            print(i.get('data').get('title'))
 
-        # Check for empty response data or API errors within the JSON structure
-        payload = resp.json()
-        posts = payload.get("data", {}).get("children", [])
-        
-        if not posts:
-            print(None)
-            return
-
-        # Print the titles of the posts
-        for post in posts:
-            title = post.get("data", {}).get("title")
-            if title:
-                print(title)
-
-    except requests.exceptions.RequestException:
-        # Catch network errors, timeouts, etc.
-        print(None)
     except Exception:
-        # Catch JSON decoding errors or unexpected structure issues
-        print(None)
+        print("None")
